@@ -2,12 +2,13 @@
 @using PuntoVenta.Client.Services
 @using PuntoVenta.Shared.Entities
 @inject ICategoriaService _categoriaService
+@inject IJSRuntime JS
 
 <h3>Lista de Categorias</h3>
 
 <div class="text-end">
     <button class="btn btn-success" disabled="@cargando">Agregar</button>
-    <button class="btn btn-warning" disabled="@cargando">PDF</button>
+    <button class="btn btn-warning" disabled="@(cargando || descargando)" @onclick="DescargarPdf">PDF</button>
 </div>
 
 @if (cargando)
@@ -48,6 +49,7 @@ else
     private List<Categoria> categorias = [];
 
     private bool cargando = false;
+    private bool descargando = false;
 
 
     protected override async Task OnInitializedAsync()
@@ -55,6 +57,25 @@ else
         cargando = true;
         categorias = await _categoriaService.GetCategoriasAsync();
         cargando = false;
+    }
+
+    private async Task DescargarPdf()
+    {
+        descargando = true;
+
+        try
+        {
+            var pdf = await _categoriaService.GetCategoriasPdfAsync();
+
+            if (pdf is not null)
+            {
+                await JS.InvokeVoidAsync("downloadFile", "categorias.pdf", "application/pdf", pdf);
+            }
+        }
+        finally
+        {
+            descargando = false;
+        }
     }
 
 }
