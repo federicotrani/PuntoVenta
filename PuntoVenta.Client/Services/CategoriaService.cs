@@ -1,17 +1,19 @@
 ﻿using PuntoVenta.Shared.DTOs;
 using PuntoVenta.Shared.Entities;
+using System.Net.Http.Json;
+
 
 namespace PuntoVenta.Client.Services;
 
 public class CategoriaService : ICategoriaService
 {
     private readonly ILogger<CategoriaService> _logger;
-    private readonly DataContext _context;
+    private readonly HttpClient _http;
 
-    public CategoriaService(ILogger<CategoriaService> logger, DataContext context)
+    public CategoriaService(ILogger<CategoriaService> logger, HttpClient http)
     {
         _logger = logger;
-        _context = context;
+        _http = http;
     }
 
     public Task<bool> AddCategoriaAsync(CategoriaAgregarDto categoria)
@@ -24,20 +26,32 @@ public class CategoriaService : ICategoriaService
         throw new NotImplementedException();
     }
 
-    public async Task<Categoria> GetCategoriaAsync(int id)
+    public async Task<Categoria> GetCategoriaByIdAsync(int id)
     {
         try
         {
-            await _context.
-        }catch(Exception ex)
+            var categoria = await _http.GetFromJsonAsync<Categoria>($"api/categorias/{id}");
+            return categoria;
+        }
+        catch (Exception ex)
         {
-            _logger.LogError($"");
+            _logger.LogError($"Error al obtener la categoria con id {id}: {ex.Message}");
+            return null;
         }
     }
 
-    public Task<List<Categoria>> GetCategoriasAsync()
+    public async Task<List<Categoria>> GetCategoriasAsync()
     {
-        throw new NotImplementedException();
+        try
+        {
+            var categorias = await _http.GetFromJsonAsync<List<Categoria>>("api/categorias");
+            return categorias;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError($"Error al obtener las categorias: {ex.Message}");
+            return null;
+        }
     }
 
     public Task<bool> UpdateCategoriaAsync(int id, CategoriaAgregarDto categoria)

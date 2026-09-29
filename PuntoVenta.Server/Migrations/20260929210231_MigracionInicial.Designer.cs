@@ -12,7 +12,7 @@ using PuntoVenta.Server.Data;
 namespace PuntoVenta.Server.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20260929145620_MigracionInicial")]
+    [Migration("20260929210231_MigracionInicial")]
     partial class MigracionInicial
     {
         /// <inheritdoc />

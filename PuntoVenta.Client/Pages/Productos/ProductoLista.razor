@@ -1,0 +1,35 @@
+﻿@page "/productos"
+@using PuntoVenta.Client.Services
+@using PuntoVenta.Shared.Entities
+@using Microsoft.AspNetCore.Components.QuickGrid
+
+<h3 class="mb-3">Lista de Productos</h3>
+
+<div class="table-responsive shadow-sm rounded">
+    <QuickGrid TGridItem="Producto" Items="@productos.AsQueryable()" Class="table table-striped table-hover align-middle mb-0">
+        <PropertyColumn Property="@(p => p.Id)" Title="Id" />
+        <PropertyColumn Property="@(p => p.Nombre)" Title="Nombre" />
+        <PropertyColumn Property="@(p => p.Precio)" Title="Precio" Format="C2" />
+        <PropertyColumn Property="@(p => p.StockActual)" Title="Stock actual" />
+    </QuickGrid>
+</div>
+
+@code {
+
+    private List<Producto> productos = new List<Producto>();
+
+    private bool cargando = false;
+
+    [Inject]
+    private IProductoService _productoService { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        cargando = true;
+        productos = await _productoService.GetProductosAsync();
+        cargando = false;
+    }
+}
+
+
+

@@ -5,7 +5,7 @@ namespace PuntoVenta.Server.Data;
 
 public class DataContext : DbContext
 {
-    public DataContext(DbContextOptions<DataContext> options) : base(options) { } 
+    public DataContext(DbContextOptions<DataContext> options) : base(options) { }
 
     public DbSet<Categoria> Categorias { get; set; }
     public DbSet<Producto> Productos { get; set; }

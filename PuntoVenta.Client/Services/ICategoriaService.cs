@@ -6,9 +6,8 @@ namespace PuntoVenta.Client.Services;
 public interface ICategoriaService
 {
     Task<List<Categoria>> GetCategoriasAsync();
-    Task<Categoria> GetCategoriaAsync(int id);
+    Task<Categoria> GetCategoriaByIdAsync(int id);
     Task<bool> AddCategoriaAsync(CategoriaAgregarDto categoria);
-    Task<bool> UpdateCategoriaAsync(int id,CategoriaAgregarDto categoria);
+    Task<bool> UpdateCategoriaAsync(int id, CategoriaAgregarDto categoria);
     Task<bool> DeleteCategoriaAsync(int id);
-
 }

@@ -1,0 +1,60 @@
+﻿@page "/categorias"
+@using PuntoVenta.Client.Services
+@using PuntoVenta.Shared.Entities
+@inject ICategoriaService _categoriaService
+
+<h3>Lista de Categorias</h3>
+
+<div class="text-end">
+    <button class="btn btn-success" disabled="@cargando">Agregar</button>
+    <button class="btn btn-warning" disabled="@cargando">PDF</button>
+</div>
+
+@if (cargando)
+{
+    <p>procesando...</p>
+}else if (categorias.Count() == 0)
+{
+    <p>no hay datos</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Nombre</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var categoria in categorias)
+            {
+                <tr>
+                    <td>@categoria.Id</td>
+                    <td>@categoria.Nombre</td>
+                    <td>
+                        <button class="btn btn-primary">Editar</button>
+                        <button class="btn btn-danger">Eliminar</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+
+@code {
+    private List<Categoria> categorias = [];
+
+    private bool cargando = false;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        cargando = true;
+        categorias = await _categoriaService.GetCategoriasAsync();
+        cargando = false;
+    }
+
+}
