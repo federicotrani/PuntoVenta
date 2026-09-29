@@ -1,0 +1,17 @@
+@PuntoVenta.Server_HostAddress = http://localhost:5033
+
+GET {{PuntoVenta.Server_HostAddress}}/api/Categorias
+Accept: application/json
+
+###
+
+POST {{PuntoVenta.Server_HostAddress}}/api/Categorias
+Content-Type: application/json
+Accept: application/json
+
+{
+  "nombre": "ElecLibreríatrónicos",
+  "descripcion": "Articulos de libreria y papelería"
+}
+
+###

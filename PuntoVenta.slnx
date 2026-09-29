@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="PuntoVenta.Client/PuntoVenta.Client.csproj" />
+  <Project Path="PuntoVenta.Server/PuntoVenta.Server.csproj" />
+  <Project Path="PuntoVenta.Shared/PuntoVenta.Shared.csproj" />
+</Solution>
