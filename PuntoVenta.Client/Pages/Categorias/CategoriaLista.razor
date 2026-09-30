@@ -3,20 +3,59 @@
 @using PuntoVenta.Shared.Entities
 @inject ICategoriaService _categoriaService
 @inject IJSRuntime JS
+@inject NavigationManager _navigation
 
 <h3>Lista de Categorias</h3>
 
 <div class="text-end">
-    <button class="btn btn-success" disabled="@cargando">Agregar</button>
-    <button class="btn btn-warning" disabled="@(cargando || descargando)" @onclick="DescargarPdf">PDF</button>
+    <button class="btn btn-sm btn-success" @onclick="AgregarCategoria" disabled="@cargando">Agregar</button>
+    <button class="btn btn-sm btn-warning" disabled="@(cargando || descargando)" @onclick="DescargarPdf">PDF</button>
 </div>
+
+@* Diálogo de confirmación ELIMINAR *@
+@if (mostrarDialogoEliminar && categoriaSeleccionada is not null)
+{
+    <div class="modal-backdrop fade show" @onclick="CancelarEliminacion"></div>
+
+    <div class="modal fade show d-block" tabindex="-1" role="dialog"
+         aria-modal="true" aria-labelledby="tituloConfirmacion">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 id="tituloConfirmacion" class="modal-title">
+                        Confirmar eliminación
+                    </h5>
+                    <button type="button" class="btn-close" aria-label="Cerrar"
+                            @onclick="CancelarEliminacion"></button>
+                </div>
+
+                <div class="modal-body">
+                    ¿Desea eliminar la categoría
+                    <strong>@categoriaSeleccionada.Nombre</strong>?
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            @onclick="CancelarEliminacion" disabled="@eliminando">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger"
+                            @onclick="ConfirmarEliminacion" disabled="@eliminando">
+                        @(eliminando ? "Eliminando..." : "Eliminar")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @if (cargando)
 {
-    <p>procesando...</p>
+    <div class="spinner-border spinner-border-sm"></div>
+    <p>Procesando...</p>
 }else if (categorias.Count() == 0)
 {
-    <p>no hay datos</p>
+    <p>No hay datos</p>
 }
 else
 {
@@ -35,8 +74,12 @@ else
                     <td>@categoria.Id</td>
                     <td>@categoria.Nombre</td>
                     <td>
-                        <button class="btn btn-primary">Editar</button>
-                        <button class="btn btn-danger">Eliminar</button>
+                        <button class="btn btn-sm btn-primary" @onclick="() => EditarCategoria(categoria.Id)">Editar</button>
+                        <button class="btn btn-sm btn-danger"
+                                @onclick="() => SolicitarEliminacion(categoria)"
+                                disabled="@cargando">
+                            Eliminar
+                        </button>
                     </td>
                 </tr>
             }
@@ -50,6 +93,9 @@ else
 
     private bool cargando = false;
     private bool descargando = false;
+    private bool eliminando = false;
+    private bool mostrarDialogoEliminar = false;
+    private Categoria? categoriaSeleccionada;
 
 
     protected override async Task OnInitializedAsync()
@@ -78,4 +124,58 @@ else
         }
     }
 
+    private void AgregarCategoria()
+    {
+        // Navigate to the category detail page for adding a new category
+        _navigation.NavigateTo("/categorias/0");
+    }
+
+    private void EditarCategoria(int id)
+    {
+        // Navigate to the category detail page for editing the selected category
+        _navigation.NavigateTo($"/categorias/{id}");
+    }
+
+    private void SolicitarEliminacion(Categoria categoria)
+    {
+        categoriaSeleccionada = categoria;
+        mostrarDialogoEliminar = true;
+    }
+
+    private void CancelarEliminacion()
+    {
+        if (eliminando)
+        {
+            return;
+        }
+
+        mostrarDialogoEliminar = false;
+        categoriaSeleccionada = null;
+    }
+
+    private async Task ConfirmarEliminacion()
+    {
+        if (categoriaSeleccionada is null)
+        {
+            return;
+        }
+
+        eliminando = true;
+
+        try
+        {
+            var eliminado = await _categoriaService.DeleteCategoriaAsync(categoriaSeleccionada.Id);
+
+            if (eliminado)
+            {
+                categorias.Remove(categoriaSeleccionada);
+                mostrarDialogoEliminar = false;
+                categoriaSeleccionada = null;
+            }
+        }
+        finally
+        {
+            eliminando = false;
+        }
+    }
 }

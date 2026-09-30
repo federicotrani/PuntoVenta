@@ -98,4 +98,54 @@ public class CategoriasController : ControllerBase
         }
     }
 
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Actualizar(int id, CategoriaAgregarDto categoriaDto)
+    {
+        try
+        {
+            var categoria = await _context.Categorias.FindAsync(id);
+
+            if (categoria is null)
+            {
+                return NotFound();
+            }
+
+            categoria.Nombre = categoriaDto.Nombre;
+            categoria.Descripcion = categoriaDto.Descripcion;
+
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al actualizar la categoría con ID {CategoriaId}", id);
+            return BadRequest("No se pudo actualizar la categoría.");
+        }
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Eliminar(int id)
+    {
+        try
+        {
+            var categoria = await _context.Categorias.FindAsync(id);
+
+            if (categoria is null)
+            {
+                return NotFound();
+            }
+
+            _context.Categorias.Remove(categoria);
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al eliminar la categoría con ID {CategoriaId}", id);
+            return BadRequest("No se pudo eliminar la categoría.");
+        }
+    }
+
 }

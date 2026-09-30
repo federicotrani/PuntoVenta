@@ -17,4 +17,9 @@
     <ProjectReference Include="..\PuntoVenta.Shared\PuntoVenta.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Pages\Ventas\" />
+    <Folder Include="Pages\Usuarios\" />
+  </ItemGroup>
+
 </Project>

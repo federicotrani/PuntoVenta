@@ -1,0 +1,68 @@
+﻿@page "/categorias/{Id:int}"
+@using PuntoVenta.Client.Services
+@using PuntoVenta.Shared.DTOs
+@using PuntoVenta.Shared.Entities
+@inject ICategoriaService _categoriaService
+@inject NavigationManager _navigation
+
+<h3>Detalle de Categoria</h3>
+
+<EditForm Model="@categoria" class="col-8">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+    <div class="mb-3">
+        <div class="mb-3">
+            <label for="nombre" class="form-label">Nombre</label>
+            <InputText id="nombre" class="form-control" @bind-Value="categoria.Nombre" />
+        </div>
+        <div class="mb-3">
+            <label for="descripcion" class="form-label">Descripcion</label>
+            <InputText id="descripcion" class="form-control" @bind-Value="categoria.Descripcion" />
+        </div>
+    </div>
+<button type="submit" class="btn btn-primary" @onclick="GuardarCategoria">Guardar</button>
+<button type="button" class="btn btn-secondary" @onclick="Cancelar">Cancelar</button>
+</EditForm>
+
+
+
+@code {
+
+    [Parameter]
+    public int Id { get; set; }
+
+    private Categoria categoria = new Categoria();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id <= 0)
+        {
+            // Handle invalid Id, maybe redirect or show an error
+            return;
+        }
+
+        categoria = await _categoriaService.GetCategoriaByIdAsync(Id);
+    }
+
+    private async Task GuardarCategoria()
+    {
+        CategoriaAgregarDto categoriaAgregarDto = new CategoriaAgregarDto(categoria.Nombre, categoria.Descripcion);
+            
+        if (Id == 0)
+        {
+            await _categoriaService.AddCategoriaAsync(categoriaAgregarDto);
+        }
+        else
+        {
+            await _categoriaService.UpdateCategoriaAsync(Id, categoriaAgregarDto);
+        }
+        // Navigate back to the category list after saving
+        _navigation.NavigateTo("/categorias");
+    }
+
+    private void Cancelar()
+    {
+        _navigation.NavigateTo("/categorias");
+    }
+
+}

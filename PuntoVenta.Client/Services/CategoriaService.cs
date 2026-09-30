@@ -16,14 +16,32 @@ public class CategoriaService : ICategoriaService
         _http = http;
     }
 
-    public Task<bool> AddCategoriaAsync(CategoriaAgregarDto categoria)
+    public async Task<bool> AddCategoriaAsync(CategoriaAgregarDto categoria)
     {
-        throw new NotImplementedException();
+        try
+        {
+            using var response = await _http.PostAsJsonAsync("api/categorias", categoria);
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al agregar la categoría {Nombre}", categoria.Nombre);
+            return false;
+        }
     }
 
-    public Task<bool> DeleteCategoriaAsync(int id)
+    public async Task<bool> DeleteCategoriaAsync(int id)
     {
-        throw new NotImplementedException();
+        try
+        {
+            using var response = await _http.DeleteAsync($"api/categorias/{id}");
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error al eliminar la categoría con id {CategoriaId}", id);
+            return false;
+        }
     }
 
     public async Task<Categoria> GetCategoriaByIdAsync(int id)
@@ -69,8 +87,12 @@ public class CategoriaService : ICategoriaService
         }
     }
 
-    public Task<bool> UpdateCategoriaAsync(int id, CategoriaAgregarDto categoria)
+    public async Task UpdateCategoriaAsync(int id, CategoriaAgregarDto categoria)
     {
-        throw new NotImplementedException();
+        var response = await _http.PutAsJsonAsync(
+            $"api/Categorias/{id}",
+            categoria);
+
+        response.EnsureSuccessStatusCode();
     }
 }
