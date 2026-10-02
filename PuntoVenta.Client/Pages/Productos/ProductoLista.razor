@@ -1,16 +1,72 @@
 ﻿@page "/productos"
 @using PuntoVenta.Client.Services
 @using PuntoVenta.Shared.Entities
+@using PuntoVenta.Shared
 @using Microsoft.AspNetCore.Components.QuickGrid
+@inject HttpClient Http
 
-<h3 class="mb-3">Lista de Productos</h3>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Lista de Productos</h3>
+    <NavLink href="/productos/nuevo" class="btn btn-success">Agregar producto</NavLink>
+</div>
+
+@* Diálogo de confirmación ELIMINAR *@
+@if (mostrarDialogoEliminar && productoSeleccionado is not null)
+{
+    <div class="modal-backdrop fade show" @onclick="CancelarEliminacion"></div>
+
+    <div class="modal fade show d-block" tabindex="-1" role="dialog"
+         aria-modal="true" aria-labelledby="tituloConfirmacion">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 id="tituloConfirmacion" class="modal-title">
+                        Confirmar eliminación
+                    </h5>
+                    <button type="button" class="btn-close" aria-label="Cerrar"
+                            @onclick="CancelarEliminacion"></button>
+                </div>
+
+                <div class="modal-body">
+                    ¿Desea eliminar el producto
+                    <strong>@productoSeleccionado.Nombre</strong>?
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                            @onclick="CancelarEliminacion" disabled="@eliminando">
+                        Cancelar
+                    </button>
+                    <button type="button" class="btn btn-danger"
+                            @onclick="ConfirmarEliminacion" disabled="@eliminando">
+                        @(eliminando ? "Eliminando..." : "Eliminar")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 <div class="table-responsive shadow-sm rounded">
-    <QuickGrid TGridItem="Producto" Items="@productos.AsQueryable()" Class="table table-striped table-hover align-middle mb-0">
+    <QuickGrid TGridItem="Producto" Items="@ProductosActivos" Class="table table-striped table-hover align-middle mb-0">
         <PropertyColumn Property="@(p => p.Id)" Title="Id" />
+        <TemplateColumn Title="Imagen">
+            @if (!string.IsNullOrWhiteSpace(context.UrlImagen))
+            {
+                <img src="@ObtenerUrlImagen(context.UrlImagen)" alt="@context.Nombre" class="img-thumbnail" style="width: 56px; height: 56px; object-fit: cover;" />
+            }
+        </TemplateColumn>
         <PropertyColumn Property="@(p => p.Nombre)" Title="Nombre" />
         <PropertyColumn Property="@(p => p.Precio)" Title="Precio" Format="C2" />
         <PropertyColumn Property="@(p => p.StockActual)" Title="Stock actual" />
+        <TemplateColumn Title="Acciones">
+            <NavLink href="@($"/productos/{context.Id}")" class="btn btn-sm btn-primary">Editar</NavLink>
+            <button type="button" class="btn btn-sm btn-danger ms-1"
+                    @onclick="() => SolicitarEliminacion(context)"
+                    disabled="@cargando">
+                Eliminar
+            </button>
+        </TemplateColumn>
     </QuickGrid>
 </div>
 
@@ -19,6 +75,11 @@
     private List<Producto> productos = new List<Producto>();
 
     private bool cargando = false;
+    private bool eliminando = false;
+    private bool mostrarDialogoEliminar = false;
+    private Producto? productoSeleccionado;
+
+    private IQueryable<Producto> ProductosActivos => productos.Where(p => p.Activo).AsQueryable();
 
     [Inject]
     private IProductoService _productoService { get; set; }
@@ -28,6 +89,52 @@
         cargando = true;
         productos = await _productoService.GetProductosAsync();
         cargando = false;
+    }
+
+    private string ObtenerUrlImagen(string nombreArchivo) =>
+        new Uri(Http.BaseAddress!, $"{ImagenProductoReglas.CarpetaUpload}/{nombreArchivo}").ToString();
+
+    private void SolicitarEliminacion(Producto producto)
+    {
+        productoSeleccionado = producto;
+        mostrarDialogoEliminar = true;
+    }
+
+    private void CancelarEliminacion()
+    {
+        if (eliminando)
+        {
+            return;
+        }
+
+        mostrarDialogoEliminar = false;
+        productoSeleccionado = null;
+    }
+
+    private async Task ConfirmarEliminacion()
+    {
+        if (productoSeleccionado is null)
+        {
+            return;
+        }
+
+        eliminando = true;
+
+        try
+        {
+            var eliminado = await _productoService.DeleteProductoAsync(productoSeleccionado.Id);
+
+            if (eliminado)
+            {
+                productoSeleccionado.Activo = false;
+                mostrarDialogoEliminar = false;
+                productoSeleccionado = null;
+            }
+        }
+        finally
+        {
+            eliminando = false;
+        }
     }
 }
 

@@ -16,6 +16,7 @@ builder.Host.UseSerilog((context, configuration) => configuration
 builder.Services.AddDbContext<DataContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<ICategoriaPdfService, CategoriaPdfService>();
+builder.Services.AddScoped<IImagenProductoService, ImagenProductoService>();
 
 builder.Services.AddCors(options =>
 {
@@ -38,6 +39,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseStaticFiles();
 
 app.UseCors();
 

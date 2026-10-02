@@ -1,6 +1,8 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PuntoVenta.Server.Data;
+using PuntoVenta.Server.Services;
 using PuntoVenta.Shared.DTOs;
 using PuntoVenta.Shared.Entities;
 
@@ -10,13 +12,17 @@ namespace PuntoVenta.Server.Controllers;
 [ApiController]
 public class ProductosController : ControllerBase
 {
+    private const int LimiteSolicitudBytes = 6 * 1024 * 1024;
+
     private readonly DataContext _context;
     private readonly ILogger<ProductosController> _logger;
+    private readonly IImagenProductoService _imagenes;
 
-    public ProductosController(DataContext context, ILogger<ProductosController> logger)
+    public ProductosController(DataContext context, ILogger<ProductosController> logger, IImagenProductoService imagenes)
     {
         _context = context;
         _logger = logger;
+        _imagenes = imagenes;
     }
 
     [HttpGet]
@@ -57,36 +63,68 @@ public class ProductosController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Agregar(ProductoAgregarDto productoDto)
+    [RequestSizeLimit(LimiteSolicitudBytes)]
+    public async Task<IActionResult> Agregar([FromForm] string producto, IFormFile? imagen)
     {
+        string? nuevaImagen = null;
+
         try
         {
+            var productoDto = JsonSerializer.Deserialize<ProductoAgregarDto>(producto, JsonSerializerOptions.Web);
+
+            if (productoDto is null)
+            {
+                return BadRequest("Los datos del producto no son válidos.");
+            }
+
             if (!await _context.Categorias.AnyAsync(c => c.Id == productoDto.CategoriaId))
             {
                 return BadRequest("La categoría indicada no existe.");
             }
 
-            var producto = CrearProducto(productoDto);
-            _context.Productos.Add(producto);
+            var entidad = CrearProducto(productoDto);
+
+            if (imagen is not null)
+            {
+                nuevaImagen = await _imagenes.GuardarAsync(imagen);
+                entidad.UrlImagen = nuevaImagen;
+            }
+
+            _context.Productos.Add(entidad);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(ObtenerPorId), new { id = producto.Id }, producto);
+            return CreatedAtAction(nameof(ObtenerPorId), new { id = entidad.Id }, entidad);
+        }
+        catch (ImagenInvalidaException ex)
+        {
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {
+            _imagenes.Eliminar(nuevaImagen);
             _logger.LogError(ex, "Error al agregar el producto");
             return BadRequest("No se pudo agregar el producto.");
         }
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Actualizar(int id, ProductoAgregarDto productoDto)
+    [RequestSizeLimit(LimiteSolicitudBytes)]
+    public async Task<IActionResult> Actualizar(int id, [FromForm] string producto, IFormFile? imagen)
     {
+        string? nuevaImagen = null;
+
         try
         {
-            var producto = await _context.Productos.FindAsync(id);
+            var productoDto = JsonSerializer.Deserialize<ProductoAgregarDto>(producto, JsonSerializerOptions.Web);
 
-            if (producto is null)
+            if (productoDto is null)
+            {
+                return BadRequest("Los datos del producto no son válidos.");
+            }
+
+            var entidad = await _context.Productos.FindAsync(id);
+
+            if (entidad is null)
             {
                 return NotFound();
             }
@@ -96,19 +134,37 @@ public class ProductosController : ControllerBase
                 return BadRequest("La categoría indicada no existe.");
             }
 
-            producto.Nombre = productoDto.Nombre;
-            producto.Precio = productoDto.Precio;
-            producto.CategoriaId = productoDto.CategoriaId;
-            producto.StockActual = productoDto.StockActual;
-            producto.StockMinimo = productoDto.StockMinimo;
-            producto.UrlImagen = productoDto.UrlImagen;
-            producto.Activo = productoDto.Activo;
+            entidad.Nombre = productoDto.Nombre;
+            entidad.Precio = productoDto.Precio;
+            entidad.CategoriaId = productoDto.CategoriaId;
+            entidad.StockActual = productoDto.StockActual;
+            entidad.StockMinimo = productoDto.StockMinimo;
+            entidad.Activo = productoDto.Activo;
+
+            var imagenAnterior = entidad.UrlImagen;
+
+            if (imagen is not null)
+            {
+                nuevaImagen = await _imagenes.GuardarAsync(imagen);
+                entidad.UrlImagen = nuevaImagen;
+            }
 
             await _context.SaveChangesAsync();
+
+            if (nuevaImagen is not null)
+            {
+                _imagenes.Eliminar(imagenAnterior);
+            }
+
             return NoContent();
+        }
+        catch (ImagenInvalidaException ex)
+        {
+            return BadRequest(ex.Message);
         }
         catch (Exception ex)
         {
+            _imagenes.Eliminar(nuevaImagen);
             _logger.LogError(ex, "Error al actualizar el producto con id {ProductoId}", id);
             return BadRequest("No se pudo actualizar el producto.");
         }
@@ -126,7 +182,7 @@ public class ProductosController : ControllerBase
                 return NotFound();
             }
 
-            _context.Productos.Remove(producto);
+            producto.Activo = false;
             await _context.SaveChangesAsync();
             return NoContent();
         }
@@ -146,7 +202,6 @@ public class ProductosController : ControllerBase
             CategoriaId = productoDto.CategoriaId,
             StockActual = productoDto.StockActual,
             StockMinimo = productoDto.StockMinimo,
-            UrlImagen = productoDto.UrlImagen,
             Activo = productoDto.Activo
         };
     }

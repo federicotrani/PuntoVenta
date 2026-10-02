@@ -1,6 +1,8 @@
 ﻿using PuntoVenta.Shared.DTOs;
 using PuntoVenta.Shared.Entities;
 using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 
 namespace PuntoVenta.Client.Services;
 
@@ -15,11 +17,12 @@ public class ProductoService : IProductoService
         _http = http;
     }
 
-    public async Task<bool> AddProductoAsync(ProductoAgregarDto producto)
+    public async Task<bool> AddProductoAsync(ProductoAgregarDto producto, ImagenUploadDto? imagen = null)
     {
         try
         {
-            var response = await _http.PostAsJsonAsync("api/productos", producto);
+            using var contenido = CrearContenido(producto, imagen);
+            var response = await _http.PostAsync("api/productos", contenido);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
@@ -64,11 +67,12 @@ public class ProductoService : IProductoService
         }
     }
 
-    public async Task<bool> UpdateProductoAsync(int id, ProductoAgregarDto producto)
+    public async Task<bool> UpdateProductoAsync(int id, ProductoAgregarDto producto, ImagenUploadDto? imagen = null)
     {
         try
         {
-            var response = await _http.PutAsJsonAsync($"api/productos/{id}", producto);
+            using var contenido = CrearContenido(producto, imagen);
+            var response = await _http.PutAsync($"api/productos/{id}", contenido);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
@@ -89,6 +93,23 @@ public class ProductoService : IProductoService
             _logger.LogError(ex, "Error al obtener la lista de productos");
             return [];
         }
+    }
+
+    private static MultipartFormDataContent CrearContenido(ProductoAgregarDto producto, ImagenUploadDto? imagen)
+    {
+        var contenido = new MultipartFormDataContent
+        {
+            { new StringContent(JsonSerializer.Serialize(producto, JsonSerializerOptions.Web), Encoding.UTF8), "producto" }
+        };
+
+        if (imagen is not null)
+        {
+            var archivo = new ByteArrayContent(imagen.Contenido);
+            archivo.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(imagen.ContentType);
+            contenido.Add(archivo, "imagen", imagen.NombreArchivo);
+        }
+
+        return contenido;
     }
 
 }

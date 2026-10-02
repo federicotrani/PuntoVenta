@@ -7,7 +7,7 @@ public interface IProductoService
 {
     Task<List<Producto>> GetProductosAsync();
     Task<Producto?> GetProductoByIdAsync(int id);
-    Task<bool> AddProductoAsync(ProductoAgregarDto producto);
-    Task<bool> UpdateProductoAsync(int id, ProductoAgregarDto producto);
+    Task<bool> AddProductoAsync(ProductoAgregarDto producto, ImagenUploadDto? imagen = null);
+    Task<bool> UpdateProductoAsync(int id, ProductoAgregarDto producto, ImagenUploadDto? imagen = null);
     Task<bool> DeleteProductoAsync(int id);
 }
