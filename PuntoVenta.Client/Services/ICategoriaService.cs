@@ -6,7 +6,6 @@ namespace PuntoVenta.Client.Services;
 public interface ICategoriaService
 {
     Task<List<Categoria>> GetCategoriasAsync();
-    Task<byte[]?> GetCategoriasPdfAsync();
     Task<Categoria> GetCategoriaByIdAsync(int id);
     Task<bool> AddCategoriaAsync(CategoriaAgregarDto categoria);
     Task UpdateCategoriaAsync(int id, CategoriaAgregarDto categoria);

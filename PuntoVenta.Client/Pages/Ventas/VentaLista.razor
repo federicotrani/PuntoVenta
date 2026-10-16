@@ -1,0 +1,150 @@
+@page "/ventas"
+@using PuntoVenta.Client.Services
+@using PuntoVenta.Shared.DTOs
+@using PuntoVenta.Shared.Enums
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.QuickGrid
+@inject IVentaService VentaService
+@inject IReporteService ReporteService
+@inject IJSRuntime JS
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Ventas</h3>
+    <div>
+        <button type="button" class="btn btn-warning me-2" disabled="@descargando" @onclick="DescargarPdf">PDF</button>
+        <NavLink href="/ventas/nueva" class="btn btn-success">Nueva venta</NavLink>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+
+@if (mostrarDialogo && seleccionada is not null)
+{
+    <div class="modal-backdrop fade show" @onclick="Cancelar"></div>
+
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="tituloConfirmacion">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 id="tituloConfirmacion" class="modal-title">Confirmar anulación</h5>
+                    <button type="button" class="btn-close" aria-label="Cerrar" @onclick="Cancelar"></button>
+                </div>
+                <div class="modal-body">
+                    ¿Desea anular la venta <strong>#@seleccionada.Id</strong>? Se devolverá el stock.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Cancelar" disabled="@anulando">Cancelar</button>
+                    <button type="button" class="btn btn-danger" @onclick="Confirmar" disabled="@anulando">
+                        @(anulando ? "Anulando..." : "Anular")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="table-responsive shadow-sm rounded">
+    <QuickGrid TGridItem="VentaListaDto" Items="@ventas.AsQueryable()" Class="table table-striped table-hover align-middle mb-0">
+        <PropertyColumn Property="@(v => v.Id)" Title="Nº" />
+        <PropertyColumn Property="@(v => v.Fecha)" Title="Fecha" Format="dd/MM/yyyy HH:mm" />
+        <PropertyColumn Property="@(v => v.FormaPago)" Title="Forma de pago" />
+        <PropertyColumn Property="@(v => v.Estado)" Title="Estado" />
+        <TemplateColumn Title="Total">
+            @context.MontoTotal.ToString("C2", Cultura)
+        </TemplateColumn>
+        <TemplateColumn Title="Acciones">
+            @if (context.Estado == EstadoVenta.Confirmada)
+            {
+                <button type="button" class="btn btn-sm btn-danger" @onclick="() => Solicitar(context)">Anular</button>
+            }
+        </TemplateColumn>
+    </QuickGrid>
+</div>
+
+@code {
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-AR");
+
+    private List<VentaListaDto> ventas = [];
+    private VentaListaDto? seleccionada;
+    private bool mostrarDialogo;
+    private bool anulando;
+    private bool descargando;
+    private string? error;
+
+    protected override async Task OnInitializedAsync() => ventas = await VentaService.GetVentasAsync();
+
+    private async Task DescargarPdf()
+    {
+        descargando = true;
+        error = null;
+
+        try
+        {
+            var pdf = await ReporteService.GetVentasPdfAsync();
+
+            if (pdf is null)
+            {
+                error = "No se pudo generar el PDF de ventas.";
+                return;
+            }
+
+            await JS.InvokeVoidAsync("downloadFile", "ventas.pdf", "application/pdf", pdf);
+        }
+        finally
+        {
+            descargando = false;
+        }
+    }
+
+    private void Solicitar(VentaListaDto venta)
+    {
+        error = null;
+        seleccionada = venta;
+        mostrarDialogo = true;
+    }
+
+    private void Cancelar()
+    {
+        if (anulando)
+        {
+            return;
+        }
+
+        mostrarDialogo = false;
+        seleccionada = null;
+    }
+
+    private async Task Confirmar()
+    {
+        if (seleccionada is null)
+        {
+            return;
+        }
+
+        anulando = true;
+
+        try
+        {
+            var (exito, mensaje) = await VentaService.AnularVentaAsync(seleccionada.Id);
+
+            if (exito)
+            {
+                seleccionada.Estado = EstadoVenta.Anulada;
+            }
+            else
+            {
+                error = mensaje;
+            }
+
+            mostrarDialogo = false;
+            seleccionada = null;
+        }
+        finally
+        {
+            anulando = false;
+        }
+    }
+}

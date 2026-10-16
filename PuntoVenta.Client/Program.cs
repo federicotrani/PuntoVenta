@@ -10,6 +10,8 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri("http://localhost:5033") });
 
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
+builder.Services.AddScoped<IReporteService, ReporteService>();
+builder.Services.AddScoped<IVentaService, VentaService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 
 await builder.Build().RunAsync();

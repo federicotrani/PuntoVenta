@@ -1,7 +1,79 @@
 ﻿@page "/"
+@using PuntoVenta.Client.Services
+@inject IProductoService ProductoService
+@inject ICategoriaService CategoriaService
+@inject IVentaService VentaService
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Dashboard</PageTitle>
 
-<h1>Hello, world!</h1>
+<h3 class="mb-4">Dashboard</h3>
 
-Welcome to your new app.
+@if (cargando)
+{
+    <p><em>Cargando...</em></p>
+}
+else
+{
+    <div class="row g-3">
+        <div class="col-12 col-md-4">
+            <div class="card text-bg-primary shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2">Ventas</h6>
+                    <p class="display-5 fw-bold mb-0">@totalVentas</p>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <NavLink href="/ventas" class="link-light">Ver ventas</NavLink>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card text-bg-success shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2">Productos</h6>
+                    <p class="display-5 fw-bold mb-0">@totalProductos</p>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <NavLink href="/productos" class="link-light">Ver productos</NavLink>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card text-bg-warning shadow-sm h-100">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2">Categorías</h6>
+                    <p class="display-5 fw-bold mb-0">@totalCategorias</p>
+                </div>
+                <div class="card-footer bg-transparent border-0">
+                    <NavLink href="/categorias" class="link-dark">Ver categorías</NavLink>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool cargando = true;
+    private int totalVentas;
+    private int totalProductos;
+    private int totalCategorias;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var ventasTask = VentaService.GetVentasAsync();
+            var productosTask = ProductoService.GetProductosAsync();
+            var categoriasTask = CategoriaService.GetCategoriasAsync();
+
+            await Task.WhenAll(ventasTask, productosTask, categoriasTask);
+
+            totalVentas = (await ventasTask)?.Count ?? 0;
+            totalProductos = (await productosTask)?.Count(p => p.Activo) ?? 0;
+            totalCategorias = (await categoriasTask)?.Count ?? 0;
+        }
+        finally
+        {
+            cargando = false;
+        }
+    }
+}

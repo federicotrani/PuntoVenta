@@ -14,13 +14,11 @@ public class CategoriasController : ControllerBase
 {
     private readonly DataContext _context;
     private readonly ILogger _logger;
-    private readonly ICategoriaPdfService _categoriaPdfService;
 
-    public CategoriasController(DataContext context, ILogger<CategoriasController> logger, ICategoriaPdfService categoriaPdfService)
+    public CategoriasController(DataContext context, ILogger<CategoriasController> logger)
     {
         _logger = logger;
         _context = context;
-        _categoriaPdfService = categoriaPdfService;
     }
 
     [HttpGet]
@@ -36,26 +34,6 @@ public class CategoriasController : ControllerBase
             var msg = $"Error al obtener lista de categorias. Detalle: {ex.Message}";
             _logger.LogError(msg);
             return BadRequest(msg);
-        }
-    }
-
-    [HttpGet("pdf")]
-    public async Task<IActionResult> DescargarPdf()
-    {
-        try
-        {
-            var categorias = await _context.Categorias
-                .AsNoTracking()
-                .OrderBy(c => c.Nombre)
-                .ToListAsync();
-
-            var pdf = _categoriaPdfService.GenerarListado(categorias);
-            return File(pdf, "application/pdf", "categorias.pdf");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al generar el PDF de categorías");
-            return BadRequest("No se pudo generar el PDF de categorías.");
         }
     }
 

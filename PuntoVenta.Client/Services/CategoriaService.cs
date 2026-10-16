@@ -72,21 +72,6 @@ public class CategoriaService : ICategoriaService
         }
     }
 
-    public async Task<byte[]?> GetCategoriasPdfAsync()
-    {
-        try
-        {
-            using var response = await _http.GetAsync("api/categorias/pdf");
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadAsByteArrayAsync();
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error al descargar el PDF de categorías");
-            return null;
-        }
-    }
-
     public async Task UpdateCategoriaAsync(int id, CategoriaAgregarDto categoria)
     {
         var response = await _http.PutAsJsonAsync(

@@ -1,0 +1,200 @@
+@page "/ventas/nueva"
+@using PuntoVenta.Client.Services
+@using PuntoVenta.Shared.DTOs
+@using PuntoVenta.Shared.Entities
+@using PuntoVenta.Shared.Enums
+@using System.Globalization
+@inject IProductoService ProductoService
+@inject IVentaService VentaService
+@inject NavigationManager Navigation
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Registrar venta</h3>
+    <NavLink href="/ventas" class="btn btn-secondary">Ver ventas</NavLink>
+</div>
+
+@if (!string.IsNullOrEmpty(error))
+{
+    <div class="alert alert-danger">@error</div>
+}
+@if (!string.IsNullOrEmpty(exito))
+{
+    <div class="alert alert-success">@exito</div>
+}
+
+<div class="row g-2 mb-3 align-items-end">
+    <div class="col-md-6">
+        <label class="form-label">Producto</label>
+        <select class="form-select" @bind="productoId">
+            <option value="0">Seleccione un producto...</option>
+            @foreach (var p in productos)
+            {
+                <option value="@p.Id">@p.Nombre - @p.Precio.ToString("C2", Cultura) (stock: @p.StockActual)</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Cantidad</label>
+        <input type="number" min="1" class="form-control" @bind="cantidad" />
+    </div>
+    <div class="col-md-2">
+        <button type="button" class="btn btn-primary" @onclick="AgregarLinea">Agregar</button>
+    </div>
+</div>
+
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Producto</th>
+            <th class="text-end">Precio</th>
+            <th class="text-end">Cantidad</th>
+            <th class="text-end">Subtotal</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var l in lineas)
+        {
+            <tr>
+                <td>@l.Producto.Nombre</td>
+                <td class="text-end">@l.Producto.Precio.ToString("C2", Cultura)</td>
+                <td class="text-end">@l.Cantidad</td>
+                <td class="text-end">@((l.Producto.Precio * l.Cantidad).ToString("C2", Cultura))</td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-danger" @onclick="() => Quitar(l)">Quitar</button>
+                </td>
+            </tr>
+        }
+        @if (lineas.Count == 0)
+        {
+            <tr><td colspan="5" class="text-center text-muted">Sin productos agregados</td></tr>
+        }
+    </tbody>
+    <tfoot>
+        <tr>
+            <th colspan="3" class="text-end">Total</th>
+            <th class="text-end">@Total.ToString("C2", Cultura)</th>
+            <th></th>
+        </tr>
+    </tfoot>
+</table>
+
+<div class="row g-2 mb-3">
+    <div class="col-md-3">
+        <label class="form-label">Forma de pago</label>
+        <select class="form-select" @bind="formaPago">
+            @foreach (var f in Enum.GetValues<FormaPago>())
+            {
+                <option value="@f">@f</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-9">
+        <label class="form-label">Notas</label>
+        <input class="form-control" maxlength="1000" @bind="notas" />
+    </div>
+</div>
+
+<button type="button" class="btn btn-success" disabled="@(guardando || lineas.Count == 0)" @onclick="Confirmar">
+    @(guardando ? "Registrando..." : "Confirmar venta")
+</button>
+
+@code {
+    private static readonly CultureInfo Cultura = CultureInfo.GetCultureInfo("es-AR");
+
+    private List<Producto> productos = [];
+    private List<LineaVentaDto> lineas = [];
+    private int productoId;
+    private int cantidad = 1;
+    private FormaPago formaPago;
+    private string? notas;
+    private string? error;
+    private string? exito;
+    private bool guardando;
+
+    private decimal Total => lineas.Sum(l => l.Producto.Precio * l.Cantidad);
+
+    protected override async Task OnInitializedAsync() => await CargarProductos();
+
+    private async Task CargarProductos()
+    {
+        var todos = await ProductoService.GetProductosAsync() ?? [];
+        productos = todos.Where(p => p.Activo && p.StockActual > 0).OrderBy(p => p.Nombre).ToList();
+    }
+
+    private void AgregarLinea()
+    {
+        error = null;
+        exito = null;
+
+        var producto = productos.FirstOrDefault(p => p.Id == productoId);
+        if (producto is null)
+        {
+            error = "Seleccione un producto.";
+            return;
+        }
+
+        if (cantidad <= 0)
+        {
+            error = "La cantidad debe ser mayor a cero.";
+            return;
+        }
+
+        var existente = lineas.FirstOrDefault(l => l.Producto.Id == producto.Id);
+        var nueva = (existente?.Cantidad ?? 0) + cantidad;
+
+        if (nueva > producto.StockActual)
+        {
+            error = $"Stock insuficiente para '{producto.Nombre}'. Disponible: {producto.StockActual}.";
+            return;
+        }
+
+        if (existente is null)
+        {
+            lineas.Add(new LineaVentaDto { Producto = producto, Cantidad = cantidad });
+        }
+        else
+        {
+            existente.Cantidad = nueva;
+        }
+
+        productoId = 0;
+        cantidad = 1;
+    }
+
+    private void Quitar(LineaVentaDto linea) => lineas.Remove(linea);
+
+    private async Task Confirmar()
+    {
+        error = null;
+        exito = null;
+        guardando = true;
+
+        try
+        {
+            var dto = new VentaAgregarDto
+            {
+                FormaPago = formaPago,
+                Notas = notas,
+                Detalles = lineas.Select(l => new VentaDetalleAgregarDto { ProductoId = l.Producto.Id, Cantidad = l.Cantidad }).ToList()
+            };
+
+            var (venta, mensaje) = await VentaService.RegistrarVentaAsync(dto);
+
+            if (venta is null)
+            {
+                error = mensaje;
+                return;
+            }
+
+            exito = $"Venta #{venta.Id} registrada por {venta.MontoTotal.ToString("C2", Cultura)}.";
+            lineas = [];
+            notas = null;
+            await CargarProductos();
+        }
+        finally
+        {
+            guardando = false;
+        }
+    }
+}

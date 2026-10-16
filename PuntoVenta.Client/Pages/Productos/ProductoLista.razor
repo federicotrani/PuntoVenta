@@ -4,10 +4,15 @@
 @using PuntoVenta.Shared
 @using Microsoft.AspNetCore.Components.QuickGrid
 @inject HttpClient Http
+@inject IJSRuntime JS
+@inject IReporteService _reporteService
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h3 class="mb-0">Lista de Productos</h3>
-    <NavLink href="/productos/nuevo" class="btn btn-success">Agregar producto</NavLink>
+    <div>
+        <button type="button" class="btn btn-warning me-2" disabled="@(cargando || descargando)" @onclick="DescargarPdf">PDF</button>
+        <NavLink href="/productos/nuevo" class="btn btn-success">Agregar producto</NavLink>
+    </div>
 </div>
 
 @* Diálogo de confirmación ELIMINAR *@
@@ -57,7 +62,9 @@
             }
         </TemplateColumn>
         <PropertyColumn Property="@(p => p.Nombre)" Title="Nombre" />
-        <PropertyColumn Property="@(p => p.Precio)" Title="Precio" Format="C2" />
+        <TemplateColumn Title="Precio" Sortable="true" SortBy="@(GridSort<Producto>.ByAscending(p => p.Precio))">
+            @context.Precio.ToString("C2", CulturaMoneda)
+        </TemplateColumn>
         <PropertyColumn Property="@(p => p.StockActual)" Title="Stock actual" />
         <TemplateColumn Title="Acciones">
             <NavLink href="@($"/productos/{context.Id}")" class="btn btn-sm btn-primary">Editar</NavLink>
@@ -72,10 +79,13 @@
 
 @code {
 
+    private static readonly System.Globalization.CultureInfo CulturaMoneda = System.Globalization.CultureInfo.GetCultureInfo("es-AR");
+
     private List<Producto> productos = new List<Producto>();
 
     private bool cargando = false;
     private bool eliminando = false;
+    private bool descargando = false;
     private bool mostrarDialogoEliminar = false;
     private Producto? productoSeleccionado;
 
@@ -89,6 +99,25 @@
         cargando = true;
         productos = await _productoService.GetProductosAsync();
         cargando = false;
+    }
+
+    private async Task DescargarPdf()
+    {
+        descargando = true;
+
+        try
+        {
+            var pdf = await _reporteService.GetProductosPdfAsync();
+
+            if (pdf is not null)
+            {
+                await JS.InvokeVoidAsync("downloadFile", "productos.pdf", "application/pdf", pdf);
+            }
+        }
+        finally
+        {
+            descargando = false;
+        }
     }
 
     private string ObtenerUrlImagen(string nombreArchivo) =>

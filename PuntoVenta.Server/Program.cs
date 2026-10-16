@@ -15,7 +15,7 @@ builder.Host.UseSerilog((context, configuration) => configuration
 // Add services to the container.
 builder.Services.AddDbContext<DataContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
-builder.Services.AddScoped<ICategoriaPdfService, CategoriaPdfService>();
+builder.Services.AddScoped<IReportePdfService, ReportePdfService>();
 builder.Services.AddScoped<IImagenProductoService, ImagenProductoService>();
 
 builder.Services.AddCors(options =>

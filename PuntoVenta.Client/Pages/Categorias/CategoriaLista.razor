@@ -3,6 +3,7 @@
 @using PuntoVenta.Shared.Entities
 @inject ICategoriaService _categoriaService
 @inject IJSRuntime JS
+@inject IReporteService _reporteService
 @inject NavigationManager _navigation
 
 <h3>Lista de Categorias</h3>
@@ -111,7 +112,7 @@ else
 
         try
         {
-            var pdf = await _categoriaService.GetCategoriasPdfAsync();
+            var pdf = await _reporteService.GetCategoriasPdfAsync();
 
             if (pdf is not null)
             {

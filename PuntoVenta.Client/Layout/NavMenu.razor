@@ -1,4 +1,8 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@using PuntoVenta.Client.Services
+@inject IReporteService ReporteService
+@inject IJSRuntime JS
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">PuntoVenta</a>
         <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
@@ -28,12 +32,66 @@
             <NavLink class="nav-link" href="productos">
                 <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Productos
             </NavLink>
-        </div>
+         </div>
+         <div class="nav-item px-3">
+            <NavLink class="nav-link" href="ventas">
+               <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Ventas
+            </NavLink>
+         </div>
+                      <div class="nav-item px-3">
+                          <button type="button" class="nav-link w-100 text-start" aria-expanded="@(mostrarReportes.ToString().ToLower())" @onclick="ToggleReportes" @onclick:stopPropagation="true">
+                              <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Reportes <span class="ms-1">@(mostrarReportes ? "▾" : "▸")</span>
+                          </button>
+                          @if (mostrarReportes)
+                          {
+                              <div class="ps-3">
+                                  <button type="button" class="nav-link w-100 text-start" disabled="@(descargando is not null)" @onclick="() => Descargar(Reporte.Categorias)">
+                                      Categorías
+                                  </button>
+                                  <button type="button" class="nav-link w-100 text-start" disabled="@(descargando is not null)" @onclick="() => Descargar(Reporte.Productos)">
+                                      Productos
+                                  </button>
+                                  <button type="button" class="nav-link w-100 text-start" disabled="@(descargando is not null)" @onclick="() => Descargar(Reporte.Ventas)">
+                                      Ventas
+                                  </button>
+                              </div>
+                          }
+                      </div>
     </nav>
 </div>
 
 @code {
+    private enum Reporte { Categorias, Productos, Ventas }
+
     private bool collapseNavMenu = true;
+    private bool mostrarReportes;
+    private Reporte? descargando;
+
+    private void ToggleReportes() => mostrarReportes = !mostrarReportes;
+
+    private async Task Descargar(Reporte reporte)
+    {
+        descargando = reporte;
+
+        try
+        {
+            var (pdf, archivo) = reporte switch
+            {
+                Reporte.Categorias => (await ReporteService.GetCategoriasPdfAsync(), "categorias.pdf"),
+                Reporte.Productos => (await ReporteService.GetProductosPdfAsync(), "productos.pdf"),
+                _ => (await ReporteService.GetVentasPdfAsync(), "ventas.pdf")
+            };
+
+            if (pdf is not null)
+            {
+                await JS.InvokeVoidAsync("downloadFile", archivo, "application/pdf", pdf);
+            }
+        }
+        finally
+        {
+            descargando = null;
+        }
+    }
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
 
