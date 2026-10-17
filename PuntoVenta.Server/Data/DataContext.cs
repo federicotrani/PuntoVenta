@@ -13,5 +13,6 @@ public class DataContext : DbContext
     public DbSet<Venta> Ventas { get; set; }
     public DbSet<VentaDetalle> VentaDetalles { get; set; }
     public DbSet<Stock> Stocks { get; set; }
+    public DbSet<Cliente> Clientes { get; set; }
 
 }

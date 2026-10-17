@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using PuntoVenta.Server.Data;
+using PuntoVenta.Server.Repositories;
+using PuntoVenta.Server.Repositories.Interfaces;
 using PuntoVenta.Server.Services;
 using QuestPDF.Infrastructure;
 using Serilog;
@@ -17,6 +19,8 @@ builder.Services.AddDbContext<DataContext>(opt =>
     opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IReportePdfService, ReportePdfService>();
 builder.Services.AddScoped<IImagenProductoService, ImagenProductoService>();
+
+builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 
 builder.Services.AddCors(options =>
 {
